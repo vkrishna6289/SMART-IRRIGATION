@@ -1,0 +1,60 @@
+//DHT22 code to send data and to connect to the server
+import network
+import time
+from machine import Pin
+import dht
+from umqtt.simple import MQTTClient
+import ujson
+
+# MQTT Server Parameters
+MQTT_CLIENT_ID = "micropython-weather-demo"
+MQTT_BROKER    = "broker.mqttdashboard.com"
+MQTT_USER      = ""
+MQTT_PASSWORD  = ""
+MQTT_TOPIC     = "wokwi-weather"
+
+# Initialize DHT22 sensor (connected to GPIO15)
+sensor = dht.DHT22(Pin(15))
+
+# Connect to WiFi
+print("Connecting to WiFi", end="")
+sta_if = network.WLAN(network.STA_IF)
+sta_if.active(True)
+sta_if.connect('Wokwi-GUEST', '')
+while not sta_if.isconnected():
+    print(".", end="")
+    time.sleep(0.1)
+print(" Connected!")
+
+# Connect to MQTT server
+print("Connecting to MQTT server... ", end="")
+client = MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER, user=MQTT_USER, password=MQTT_PASSWORD)
+client.connect()
+print("Connected!")
+
+# Main loop to get sensor data and send it via MQTT
+while True:
+    # Wait a few seconds between readings
+    time.sleep(2)
+
+    try:
+        # Read data from DHT22 sensor
+        sensor.measure()  # Trigger measurement
+        humidity = sensor.humidity()  # Get humidity
+        temperature = sensor.temperature()  # Get temperature in Celsius
+
+        # Prepare data as JSON
+        data = {
+            'temperature': temperature,
+            'humidity': humidity
+        }
+
+        # Publish data to MQTT topic
+        client.publish(MQTT_TOPIC, ujson.dumps(data))
+        print(f"Published: {data}")
+
+    except Exception as e:
+        print("Failed to read from DHT sensor:", e)
+
+    # Give a slight delay before the next reading
+    time.sleep(10)
