@@ -1,45 +1,51 @@
-
 #include "DHT.h"
 
+// Pin for the DHT sensor
 #define DHTPIN 4     // Digital pin connected to the DHT sensor
 
-//#define DHTTYPE DHT11   // DHT 11
-#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
-//#define DHTTYPE DHT21   // DHT 21 (AM2301)
+// Pin for the relay
+#define RELAY_PIN 5   // Choose a GPIO pin for the relay (for example, GPIO 5)
 
+// Define sensor type (DHT22 in this case)
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
 
 DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
+  // Start the serial communication
   Serial.begin(9600);
   Serial.println(F("DHTxx test!"));
 
+  // Initialize the DHT sensor
   dht.begin();
+
+  // Set the relay pin as an output
+  pinMode(RELAY_PIN, OUTPUT);
+  
+  // Initialize relay to off (assuming active LOW relay)
+  digitalWrite(RELAY_PIN, HIGH);  // Relay is off when the pin is HIGH
 }
 
 void loop() {
-  // Wait a few seconds between measurements.
+  // Wait a few seconds between measurements
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  // Read humidity and temperature
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
+  float f = dht.readTemperature(true);  // Temperature in Fahrenheit
 
-  // Check if any reads failed and exit early (to try again).
+  // Check if any readings failed
   if (isnan(h) || isnan(t) || isnan(f)) {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
 
-  // Compute heat index in Fahrenheit (the default)
+  // Compute heat index (both Celsius and Fahrenheit)
   float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
   float hic = dht.computeHeatIndex(t, h, false);
 
+  // Print the readings
   Serial.print(F("Humidity: "));
   Serial.print(h);
   Serial.print(F("%  Temperature: "));
@@ -51,4 +57,15 @@ void loop() {
   Serial.print(F("°C "));
   Serial.print(hif);
   Serial.println(F("°F"));
+
+  // Control the relay based on humidity
+  if (h > 40) {
+    // Humidity is greater than 40%, turn relay ON (LOW for active-low relay)
+    digitalWrite(RELAY_PIN, LOW);
+    Serial.println(F("Relay ON"));
+  } else {
+    // Humidity is less than or equal to 40%, turn relay OFF (HIGH for active-low relay)
+    digitalWrite(RELAY_PIN, HIGH);
+    Serial.println(F("Relay OFF"));
+  }
 }
